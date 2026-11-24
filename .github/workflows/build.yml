@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Use the newest Xcode 26 (Liquid Glass needs the macOS 26 SDK)
         run: |
@@ -52,7 +52,7 @@ jobs:
           fi
           codesign --verify --verbose $BIN
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: MiniDeck
           path: dist/MiniDeck.zip
