@@ -4,13 +4,18 @@ set -euo pipefail
 cd "${0:A:h}"
 VERSION=$(<VERSION)   # the one place the version lives; release.sh sets it
 # Universal binary (Apple Silicon + Intel); each arch needs its own build folder.
-swift build -c release --triple arm64-apple-macosx14.0 --scratch-path .build-arm64
-swift build -c release --triple x86_64-apple-macosx14.0 --scratch-path .build-x86
+ARM=(-c release --triple arm64-apple-macosx14.0 --scratch-path .build-arm64)
+X86=(-c release --triple x86_64-apple-macosx14.0 --scratch-path .build-x86)
+swift build $ARM
+swift build $X86
+# Ask Swift where it put each binary (the folder differs between Swift versions).
+ARM_BIN=$(swift build $ARM --show-bin-path)/MiniDeck
+X86_BIN=$(swift build $X86 --show-bin-path)/MiniDeck
 APP=MiniDeck.app
 rm -rf $APP
 mkdir -p $APP/Contents/MacOS $APP/Contents/Resources
 cp icon/AppIcon.icns $APP/Contents/Resources/AppIcon.icns   # remake with: swift icon/make-icon.swift
-lipo -create .build-arm64/out/Products/Release/MiniDeck .build-x86/out/Products/Release/MiniDeck \
+lipo -create "$ARM_BIN" "$X86_BIN" \
   -output $APP/Contents/MacOS/MiniDeck
 cat > $APP/Contents/Info.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
