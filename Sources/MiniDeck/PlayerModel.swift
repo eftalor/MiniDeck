@@ -58,6 +58,29 @@ final class PlayerModel: ObservableObject {
     /// After a play/pause press, ignore polled play state until this time.
     private var holdStateUntil = Date.distantPast
 
+    // MARK: - Polling budget
+    // Music announces track and play/pause changes itself, and the progress bar
+    // is computed locally, so asking Music for its status is only a safety net.
+    /// True while the window is on screen (not minimized, hidden or covered).
+    @Published var windowVisible = true {
+        didSet { if windowVisible && !oldValue { pollSoon() } }
+    }
+    private var nextPollAt = Date.distantPast
+    private var pollInterval: TimeInterval {
+        if loadingText != nil { return 1 }
+        if info.isPlaying { return windowVisible ? 5 : 15 }
+        return 15
+    }
+    /// Check Music's status within about a second (after a button press, say).
+    func pollSoon(in seconds: TimeInterval = 0.8) {
+        nextPollAt = min(nextPollAt, Date().addingTimeInterval(seconds))
+    }
+    private func tick() {
+        // Cheap local check; also keeps "Music isn't running" up to date.
+        let isUp = bridge.isMusicRunning
+        if isUp != running || Date() >= nextPollAt { poll() }
+    }
+
     /// Start Music hidden in the background when MiniDeck opens.
     @Published var autoStartMusic = UserDefaults.standard.object(forKey: "autoStartMusic") as? Bool ?? true {
         didSet { UserDefaults.standard.set(autoStartMusic, forKey: "autoStartMusic") }
@@ -222,7 +245,10 @@ final class PlayerModel: ObservableObject {
             loadingText = nil   // Music stays closed until you press play
         }
         poll()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.poll() }
+        let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.tick() }
+        t.tolerance = 0.5   // let macOS batch the wake-ups
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
         // Music.app announces play/pause/track changes; refresh right away on those.
         DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("com.apple.Music.playerInfo"), object: nil, queue: .main
@@ -277,6 +303,7 @@ final class PlayerModel: ObservableObject {
     }
 
     func poll() {
+        nextPollAt = Date().addingTimeInterval(pollInterval)
         running = bridge.isMusicRunning
         guard running else {
             // Keep showing the saved song while it's waiting to be resumed.
@@ -299,6 +326,7 @@ final class PlayerModel: ObservableObject {
             // While starting or resuming, Music's half-ready state would flash "Not playing".
             guard self.loadingText == nil else { return }
             self.update(with: new)
+            self.nextPollAt = Date().addingTimeInterval(self.pollInterval)
             if new.isPlaying, Date().timeIntervalSince(self.lastResumeSave) > 10 { self.saveResumePoint() }
         }
     }
@@ -351,6 +379,7 @@ final class PlayerModel: ObservableObject {
         guard !tracksFor.isEmpty else { return }
         resumePending = false
         bridge.playTrack(t.trackID, inPlaylist: tracksFor)
+        pollSoon(in: 1.5)
     }
 
     func isCurrent(_ p: Playlist) -> Bool {
@@ -369,10 +398,12 @@ final class PlayerModel: ObservableObject {
             guard let self else { return }
             if self.resumePending { self.resume(thenPlay: true) } else { self.bridge.playPause() }
         }
+        pollSoon(in: 1.6)   // after the 1.5 s hold, confirm the real state
     }
     func next() {
         let before = info.trackID
         withMusic { [weak self] in self?.bridge.next() }
+        pollSoon()
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             guard let self, self.info.trackID == before, !before.isEmpty else { return }
             Log.write("next: song didn't change (still \(self.info.name), playlist '\(self.info.playlist)')")
@@ -381,8 +412,9 @@ final class PlayerModel: ObservableObject {
     func toggleShuffle() {
         info.shuffle.toggle()   // instant feedback; the next status poll confirms it
         bridge.setShuffle(info.shuffle)
+        pollSoon()
     }
-    func previous() { withMusic { [weak self] in self?.bridge.previous() } }
+    func previous() { withMusic { [weak self] in self?.bridge.previous() }; pollSoon() }
     func play(_ p: Playlist) {
         Log.write("play playlist \(p.name)")
         resumePending = false
@@ -398,5 +430,6 @@ final class PlayerModel: ObservableObject {
         info.position = t
         positionStamp = Date()
         bridge.seek(to: t)
+        pollSoon(in: 1.5)
     }
 }

@@ -47,6 +47,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         model.onLayoutChange = { [weak self] in
             DispatchQueue.main.async { DispatchQueue.main.async { self?.fitToContent(animated: true) } }
         }
+        // Stop redrawing and slow polling while the player can't be seen.
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification, object: panel, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.model.windowVisible = self.panel.occlusionState.contains(.visible)
+        }
         model.start()
     }
 

@@ -182,7 +182,9 @@ struct PlayerView: View {
     }
 
     private var progress: some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+        // Ticks once a second only while playing and on screen; otherwise it's idle.
+        TimelineView(.animation(minimumInterval: 1,
+                                paused: !(model.info.isPlaying && model.windowVisible))) { ctx in
             let d = model.info.duration
             let pos = model.dragFraction.map { $0 * d } ?? model.livePosition(at: ctx.date)
             let frac = d > 0 ? max(0, min(1, pos / d)) : 0

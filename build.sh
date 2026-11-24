@@ -20,8 +20,8 @@ cat > $APP/Contents/Info.plist <<PLIST
   <key>CFBundleExecutable</key><string>MiniDeck</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.18</string>
-  <key>CFBundleVersion</key><string>18</string>
+  <key>CFBundleShortVersionString</key><string>0.22</string>
+  <key>CFBundleVersion</key><string>22</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><false/>
   <key>NSAppleEventsUsageDescription</key><string>MiniDeck controls Music.app (play, pause, skip, playlists).</string>
