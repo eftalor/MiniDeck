@@ -30,6 +30,7 @@ Apple Music subscription, AirPlay, EQ and lossless settings all keep working exa
 - Album art (from Music, with an online fallback when Music has none), title, artist and album
 - Live progress bar — drag it to seek
 - Shuffle toggle that reflects Music's real state
+- **Volume for Music only** (not the Mac's): click the speaker for a slider, scroll over it to adjust, Option-click to mute
 - "Playing from" line showing the current playlist
 
 **Playlists**
@@ -111,7 +112,6 @@ Ideas, not promises:
 
 - Repeat button
 - Keyboard shortcuts / media keys
-- Volume control
 - Compact "controls only" mode
 - Album art in the song list
 

@@ -11,6 +11,8 @@ struct TrackInfo: Equatable {
     var playlist = ""
     var playlistID = ""
     var shuffle = false
+    /// Music's own volume, 0...100 (-1 when unknown).
+    var volume = -1
     var isPlaying: Bool { state == "playing" }
 }
 
@@ -63,7 +65,11 @@ final class MusicBridge {
         try
             set mdShuffle to shuffle enabled as string
         end try
-        if mdState is "stopped" then return mdState & mdSep & mdShuffle
+        set mdVol to "-1"
+        try
+            set mdVol to (sound volume as string)
+        end try
+        if mdState is "stopped" then return mdState & mdSep & mdShuffle & mdSep & mdSep & mdSep & mdSep & "0" & mdSep & "0" & mdSep & mdSep & mdSep & mdSep & mdVol
         set mdOut to mdState & mdSep & mdShuffle
         try
             set mdTrack to current track
@@ -76,7 +82,7 @@ final class MusicBridge {
         on error
             set mdOut to mdOut & mdSep & "" & mdSep & ""
         end try
-        return mdOut
+        return mdOut & mdSep & mdVol
     end tell
     end timeout
     """
@@ -102,6 +108,7 @@ final class MusicBridge {
             info.name = str(2); info.artist = str(3); info.album = str(4)
             info.duration = num(5) / 1000; info.position = num(6) / 1000
             info.trackID = str(7); info.playlist = str(8); info.playlistID = str(9)
+            info.volume = Int(str(10)) ?? -1
             done(info)
         }
     }
@@ -254,6 +261,8 @@ final class MusicBridge {
 
     func playPause() { send("PlPs", fallback: "playpause") }
     func next() { send("Next", fallback: "next track") }
+    /// Music's own volume (not the Mac's). 0...100.
+    func setVolume(_ v: Int) { command("set sound volume to \(max(0, min(100, v)))") }
     func setShuffle(_ on: Bool) { command("set shuffle enabled to \(on)") }
     func previous() { send("Prev", fallback: "previous track") }
     func seek(to seconds: Double) {

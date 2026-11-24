@@ -81,7 +81,7 @@ struct PlayerView: View {
                         .help("Playing from this playlist")
                 }
                 progress
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     control("backward.fill", size: 14, action: model.previous)
                     control(model.info.isPlaying ? "pause.fill" : "play.fill", size: 20, action: model.playPause)
                     control("forward.fill", size: 14, action: model.next)
@@ -105,6 +105,7 @@ struct PlayerView: View {
                     }
                     .buttonStyle(.plain)
                     .help(model.showQueue ? "Hide the song list" : "Show the playlist's songs")
+                    volumeButton
                     Spacer(minLength: 4)
                     playlistMenu
                 }
@@ -228,6 +229,46 @@ struct PlayerView: View {
         }
     }
 
+    private var volumeSymbol: String {
+        switch model.volume {
+        case ..<1: return "speaker.slash.fill"
+        case ..<34: return "speaker.wave.1.fill"
+        case ..<67: return "speaker.wave.2.fill"
+        default: return "speaker.wave.3.fill"
+        }
+    }
+
+    /// Music's own volume: click for a slider, scroll over the icon to adjust, Option-click to mute.
+    private var volumeButton: some View {
+        Button(action: {
+            if NSEvent.modifierFlags.contains(.option) { model.toggleMute() } else { model.showVolume.toggle() }
+        }) {
+            Image(systemName: volumeSymbol)
+                .font(.system(size: 12))
+                .foregroundStyle(model.volume < 1 ? Color.accentColor : Color.secondary)
+                .frame(width: 24, height: 24, alignment: .center)
+        }
+        .buttonStyle(.plain)
+        .overlay(ScrollCatcher { dy in model.setVolume(model.volume + dy) })
+        .help("Music volume \(Int(model.volume))% (only Music, not the Mac). Scroll to adjust, Option-click to mute")
+        .popover(isPresented: Binding(get: { model.showVolume }, set: { model.showVolume = $0 }),
+                 arrowEdge: .bottom) {
+            HStack(spacing: 8) {
+                Button(action: model.toggleMute) {
+                    Image(systemName: volumeSymbol).frame(width: 18)
+                }
+                .buttonStyle(.plain)
+                .help(model.volume < 1 ? "Unmute" : "Mute")
+                Slider(value: Binding(get: { model.volume }, set: { model.setVolume($0) }), in: 0...100)
+                    .frame(width: 140)
+                Text("\(Int(model.volume))%").monospacedDigit()
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .frame(width: 34, alignment: .trailing)
+            }
+            .padding(10)
+        }
+    }
+
     private var playlistMenu: some View {
         Menu {
             if model.playlists.isEmpty {
@@ -279,4 +320,25 @@ struct PlayerView: View {
         let t = Int(s)
         return String(format: "%d:%02d", t / 60, t % 60)
     }
+}
+
+/// Receives scroll-wheel and trackpad scrolls over a view, and lets clicks pass through.
+struct ScrollCatcher: NSViewRepresentable {
+    var onScroll: (Double) -> Void
+
+    final class CatcherView: NSView {
+        var onScroll: ((Double) -> Void)?
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            NSApp.currentEvent?.type == .scrollWheel ? super.hitTest(point) : nil
+        }
+        override func scrollWheel(with e: NSEvent) {
+            // Trackpads report fine-grained deltas; mouse wheels coarse lines.
+            let dy = e.hasPreciseScrollingDeltas ? e.scrollingDeltaY / 4 : e.scrollingDeltaY * 4
+            // Rolling or swiping up means louder, whatever the "natural scrolling" setting.
+            onScroll?(e.isDirectionInvertedFromDevice ? -dy : dy)
+        }
+    }
+
+    func makeNSView(context: Context) -> CatcherView { let v = CatcherView(); v.onScroll = onScroll; return v }
+    func updateNSView(_ v: CatcherView, context: Context) { v.onScroll = onScroll }
 }

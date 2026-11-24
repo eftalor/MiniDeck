@@ -43,6 +43,31 @@ final class PlayerModel: ObservableObject {
         }
     }
     var onFloatingChange: ((Bool) -> Void)?
+
+    // MARK: - Volume (Music's own, not the Mac's)
+    @Published var volume: Double = 50
+    @Published var showVolume = false
+    private var volumeKnown = false
+    private var volumeHoldUntil = Date.distantPast
+    private var volumeSendScheduled = false
+    private var volumeBeforeMute: Double = 50
+
+    /// Change Music's volume; slider drags and scrolls are sent at most ~12 times a second.
+    func setVolume(_ v: Double) {
+        volume = max(0, min(100, v.rounded()))
+        volumeHoldUntil = Date().addingTimeInterval(2)   // don't let a poll undo the change
+        guard !volumeSendScheduled, running else { return }
+        volumeSendScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+            guard let self else { return }
+            self.volumeSendScheduled = false
+            self.bridge.setVolume(Int(self.volume))
+        }
+    }
+    func toggleMute() {
+        if volume > 0 { volumeBeforeMute = volume; setVolume(0) }
+        else { setVolume(volumeBeforeMute > 0 ? volumeBeforeMute : 50) }
+    }
     /// Clear (most see-through) or regular (frosted) glass.
     @Published var glassClear = UserDefaults.standard.object(forKey: "glassClear") as? Bool ?? true {
         didSet { UserDefaults.standard.set(glassClear, forKey: "glassClear") }
@@ -334,6 +359,9 @@ final class PlayerModel: ObservableObject {
             // While starting or resuming, Music's half-ready state would flash "Not playing".
             guard self.loadingText == nil else { return }
             self.update(with: new)
+            if new.volume >= 0, Date() >= self.volumeHoldUntil, Double(new.volume) != self.volume {
+                self.volume = Double(new.volume)
+            }
             self.nextPollAt = Date().addingTimeInterval(self.pollInterval)
             if new.isPlaying, Date().timeIntervalSince(self.lastResumeSave) > 10 { self.saveResumePoint() }
         }
