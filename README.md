@@ -9,6 +9,10 @@
   Native Swift + SwiftUI · No Electron · No API keys · Talks to Music.app directly.
 </p>
 
+<p align="center">
+  <img src="docs/screenshot.png" width="400" alt="MiniDeck playing Thunderstruck by AC/DC from the Flow playlist, with shuffle on and the pin and glass buttons in the corner">
+</p>
+
 ---
 
 ## Why
