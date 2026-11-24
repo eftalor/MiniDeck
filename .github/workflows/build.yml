@@ -5,7 +5,8 @@ on:
   push:
     branches: [main]
     tags: ['v*']          # path filters don't apply to tags, so releases always build
-    paths-ignore: ['**.md', 'docs/**']
+    # VERSION alone changes in release.sh's commit; the tag build covers it.
+    paths-ignore: ['**.md', 'docs/**', 'VERSION']
   pull_request:
     paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
