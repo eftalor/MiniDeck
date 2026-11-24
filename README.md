@@ -5,7 +5,7 @@
 <h1 align="center">MiniDeck</h1>
 
 <p align="center">
-  A tiny, always-visible mini player for Apple Music on macOS.<br>
+  A tiny, playlist-focused mini player for Apple Music on macOS.<br>
   Native Swift + SwiftUI · No Electron · No API keys · Talks to Music.app directly.
 </p>
 
