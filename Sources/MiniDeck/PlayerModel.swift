@@ -35,6 +35,14 @@ final class PlayerModel: ObservableObject {
             DispatchQueue.main.async { NSApp.windows.forEach { $0.invalidateShadow() } }
         }
     }
+    /// Keep the player above other windows (remembered between launches).
+    @Published var floating = UserDefaults.standard.object(forKey: "floating") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(floating, forKey: "floating")
+            onFloatingChange?(floating)
+        }
+    }
+    var onFloatingChange: ((Bool) -> Void)?
     /// Clear (most see-through) or regular (frosted) glass.
     @Published var glassClear = UserDefaults.standard.object(forKey: "glassClear") as? Bool ?? true {
         didSet { UserDefaults.standard.set(glassClear, forKey: "glassClear") }

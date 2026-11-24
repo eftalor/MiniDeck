@@ -42,8 +42,6 @@ struct WindowBackground: NSViewRepresentable {
 
 struct PlayerView: View {
     @ObservedObject var model: PlayerModel
-    var onToggleFloat: () -> Void
-    var isFloating: () -> Bool
     var onClose: () -> Void
     var onMinimize: () -> Void
 
@@ -128,20 +126,31 @@ struct PlayerView: View {
             .onHover { model.hoverWindowButtons = $0 }
         }
         .overlay(alignment: .topTrailing) {
-            Button(action: { model.glass.toggle() }) {
-                Image(systemName: model.glass ? "drop.fill" : "drop")
-                    .font(.system(size: 11))
-                    .foregroundStyle(model.glass ? Color.accentColor : Color.secondary)
-                    .frame(width: 20, height: 20)
+            HStack(spacing: 2) {
+                Button(action: { model.floating.toggle() }) {
+                    Image(systemName: model.floating ? "pin.fill" : "pin")
+                        .font(.system(size: 11))
+                        .rotationEffect(.degrees(model.floating ? 0 : 45))
+                        .foregroundStyle(model.floating ? Color.accentColor : Color.secondary)
+                        .frame(width: 20, height: 20)
+                }
+                .buttonStyle(.plain)
+                .help(model.floating ? "Always on top (click to turn off)" : "Not on top (click to keep above other windows)")
+                Button(action: { model.glass.toggle() }) {
+                    Image(systemName: model.glass ? "drop.fill" : "drop")
+                        .font(.system(size: 11))
+                        .foregroundStyle(model.glass ? Color.accentColor : Color.secondary)
+                        .frame(width: 20, height: 20)
+                }
+                .buttonStyle(.plain)
+                .help(model.glass ? "Glass is on (click to turn off)" : "Glass is off (click to turn on)")
             }
-            .buttonStyle(.plain)
-            .help(model.glass ? "Glass is on (click to turn off)" : "Glass is off (click to turn on)")
             .padding(.top, 4)
             .padding(.trailing, 8)
         }
         .contextMenu {
             Button(model.showQueue ? "Hide song list" : "Show song list") { model.showQueue.toggle() }
-            Button(isFloating() ? "Stop floating on top" : "Float on top", action: onToggleFloat)
+            Toggle("Always on top", isOn: Binding(get: { model.floating }, set: { model.floating = $0 }))
             Button(model.glass ? "Turn glass off" : "Turn glass on") { model.glass.toggle() }
             Button(model.glassClear ? "Glass style: frosted" : "Glass style: clear") { model.glassClear.toggle() }
             Divider()

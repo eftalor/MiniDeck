@@ -25,11 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.title = "MiniDeck"   // shown on the minimized window in the Dock
         panel.delegate = self
 
-        let floating = UserDefaults.standard.object(forKey: "floating") as? Bool ?? true
-        panel.level = floating ? .floating : .normal
+        panel.level = model.floating ? .floating : .normal
+        model.onFloatingChange = { [weak self] on in self?.panel.level = on ? .floating : .normal }
 
-        let view = PlayerView(model: model, onToggleFloat: { [weak self] in self?.toggleFloat() },
-                              isFloating: { [weak self] in self?.panel.level == .floating },
+        let view = PlayerView(model: model,
                               onClose: { NSApp.terminate(nil) },
                               onMinimize: { [weak self] in self?.minimize() })
         let host = NSHostingView(rootView: view)
@@ -65,11 +64,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.setFrame(NSRect(x: panel.frame.minX, y: top - size.height, width: size.width, height: size.height),
                        display: true, animate: animated)
         panel.invalidateShadow()
-    }
-
-    func toggleFloat() {
-        panel.level = panel.level == .floating ? .normal : .floating
-        UserDefaults.standard.set(panel.level == .floating, forKey: "floating")
     }
 
     // Yellow button: minimize to the Dock. Borderless windows can refuse to
