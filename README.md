@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" width="400" alt="MiniDeck playing Thunderstruck by AC/DC from the Flow playlist, with shuffle on and the pin and glass buttons in the corner">
+  <img src="docs/screenshot.png" width="400" alt="MiniDeck playing Back To Black by Amy Winehouse from the Flow playlist, with the volume, song list and playlist buttons">
 </p>
 
 ---
