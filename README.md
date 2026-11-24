@@ -37,8 +37,8 @@ Apple Music subscription, AirPlay, EQ and lossless settings all keep working exa
 - Optional **song list** under the player that follows along and jumps to the current song; double-click to play any song
 
 **Window**
-- Floating, borderless panel that lives on every Space (toggle "float on top" from the right-click menu)
-- **Liquid Glass** background on macOS 26 (clear or frosted), or the classic dark blur — one-click toggle
+- Borderless panel that lives on every Space, with a **pin button** to keep it always on top (or not)
+- **Liquid Glass** background on macOS 26 (clear or frosted), or the classic dark blur — one-click toggle next to the pin
 - Built-in close / minimize buttons, Dock icon, ⌘Q
 - Remembers its position
 
@@ -47,6 +47,8 @@ Apple Music subscription, AirPlay, EQ and lossless settings all keep working exa
 - Optionally quits Music when you quit MiniDeck
 - **Resumes where you left off**: the last song and position are restored, paused, until you press play
 - Loading indicator while Music wakes up instead of a confusing "Not playing"
+
+**Light on resources**: Music announces song changes itself, so MiniDeck only checks in every few seconds and stops redrawing when it is out of sight.
 
 Everything else lives in the right-click menu.
 
