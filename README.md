@@ -82,7 +82,8 @@ The app is ad-hoc signed, not notarized. If you copy the zip to another Mac, rig
 
 ### Releasing
 
-The version lives in `VERSION`. To publish a new version (builds, tags, pushes and uploads the zip):
+The version lives in `VERSION`. GitHub Actions builds every push on macOS 26 with Xcode 26; a version tag
+also publishes a release. To publish a new version (updates `VERSION`, tags, pushes, then follows the build):
 
 ```sh
 ./release.sh 0.24 "What changed"
