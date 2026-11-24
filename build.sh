@@ -2,6 +2,7 @@
 # Builds MiniDeck.app in this folder. Usage: ./build.sh [--install]
 set -euo pipefail
 cd "${0:A:h}"
+VERSION=$(<VERSION)   # the one place the version lives; release.sh sets it
 # Universal binary (Apple Silicon + Intel); each arch needs its own build folder.
 swift build -c release --triple arm64-apple-macosx14.0 --scratch-path .build-arm64
 swift build -c release --triple x86_64-apple-macosx14.0 --scratch-path .build-x86
@@ -20,8 +21,8 @@ cat > $APP/Contents/Info.plist <<PLIST
   <key>CFBundleExecutable</key><string>MiniDeck</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.23</string>
-  <key>CFBundleVersion</key><string>23</string>
+  <key>CFBundleShortVersionString</key><string>$VERSION</string>
+  <key>CFBundleVersion</key><string>$VERSION</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><false/>
   <key>NSAppleEventsUsageDescription</key><string>MiniDeck controls Music.app (play, pause, skip, playlists).</string>

@@ -58,6 +58,12 @@ Everything else lives in the right-click menu.
 - Apple's Music app
 - To build: Xcode **or** just the Command Line Tools (`xcode-select --install`)
 
+## Download
+
+Grab the latest **MiniDeck-x.y.zip** from [Releases](https://github.com/eftalor/MiniDeck/releases/latest), unzip it,
+drag **MiniDeck.app** into Applications and open it. It isn't notarized, so the first time use right-click → **Open**
+(or *System Settings → Privacy & Security → Open Anyway*).
+
 ## Build & install
 
 ```sh
@@ -72,6 +78,14 @@ On first launch macOS asks whether MiniDeck may control **Music** — allow it.
 If you said no by accident: *System Settings → Privacy & Security → Automation → MiniDeck → Music*.
 
 The app is ad-hoc signed, not notarized. If you copy the zip to another Mac, right-click → **Open** the first time.
+
+### Releasing
+
+The version lives in `VERSION`. To publish a new version (builds, tags, pushes and uploads the zip):
+
+```sh
+./release.sh 0.24 "What changed"
+```
 
 ## How it works
 
