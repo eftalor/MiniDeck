@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" width="400" alt="MiniDeck playing Back To Black by Amy Winehouse from the Flow playlist, with the volume, song list and playlist buttons">
+  <img src="docs/screenshot.png" width="420" alt="MiniDeck playing Take Me Away by FM Attack, with the playlist picker open and a fuzzy search for 'ro' highlighting the matched letters">
 </p>
 
 ---
@@ -135,3 +135,7 @@ Ideas, not promises:
 ## Credits
 
 Vibe-coded with [Claude Code](https://claude.com/claude-code).
+
+## License
+
+[MIT](LICENSE)
