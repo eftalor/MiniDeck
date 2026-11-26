@@ -161,6 +161,7 @@ struct PlayerView: View {
             Toggle("Quit Music when MiniDeck quits", isOn: Binding(
                 get: { model.quitMusicOnExit }, set: { model.quitMusicOnExit = $0 }))
             Divider()
+            Button("About MiniDeck \(About.version)") { About.show() }
             Button("Quit MiniDeck") { NSApp.terminate(nil) }
         }
     }

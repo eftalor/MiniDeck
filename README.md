@@ -52,6 +52,7 @@ Apple Music subscription, AirPlay, EQ and lossless settings all keep working exa
 - Optionally quits Music when you quit MiniDeck
 - **Resumes where you left off**: the last song and position are restored, paused, until you press play
 - Loading indicator while Music wakes up instead of a confusing "Not playing"
+- **About MiniDeck** (app menu or right-click) shows the version
 
 **Light on resources**: Music announces song changes itself, so MiniDeck only checks in every few seconds and stops redrawing when it is out of sight.
 

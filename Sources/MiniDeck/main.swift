@@ -104,6 +104,10 @@ let mainMenu = NSMenu()
 let appItem = NSMenuItem()
 mainMenu.addItem(appItem)
 let appMenu = NSMenu()
+let aboutItem = NSMenuItem(title: "About MiniDeck", action: #selector(About.Target.show), keyEquivalent: "")
+aboutItem.target = About.target
+appMenu.addItem(aboutItem)
+appMenu.addItem(.separator())
 appMenu.addItem(withTitle: "Quit MiniDeck", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 appItem.submenu = appMenu
 app.mainMenu = mainMenu
