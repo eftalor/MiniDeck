@@ -77,8 +77,13 @@ jobs:
              right-click the app → **Open**, or go to **System Settings → Privacy & Security → Open Anyway**.
           4. Allow MiniDeck to control **Music** when asked.
 
+          **Terminal install** (advanced; no Gatekeeper prompt, works better on company-managed Macs):
+          \`\`\`sh
+          pkill -x MiniDeck; cd /tmp && rm -rf minideck && mkdir minideck && cd minideck && curl -fsSLO $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG/MiniDeck-$V.zip && ditto -x -k MiniDeck-$V.zip . && rm -rf /Applications/MiniDeck.app && ditto MiniDeck.app /Applications/MiniDeck.app && open /Applications/MiniDeck.app
+          \`\`\`
+
           Requires macOS 14 or later (Liquid Glass needs macOS 26). Universal: Apple Silicon and Intel.
           Built by GitHub Actions ([log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)).
           NOTES
           sed -i '' 's/^          //' notes.md
-          gh release create "$TAG" "dist/MiniDeck-$V.zip" --title "MiniDeck $V" --notes-file notes.md
+          gh release create "$TAG" "dist/MiniDeck-$V.zip" dist/MiniDeck.zip --title "MiniDeck $V" --notes-file notes.md

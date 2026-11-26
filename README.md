@@ -69,6 +69,17 @@ Grab the latest **MiniDeck-x.y.zip** from [Releases](https://github.com/eftalor/
 drag **MiniDeck.app** into Applications and open it. It isn't notarized, so the first time use right-click → **Open**
 (or *System Settings → Privacy & Security → Open Anyway*).
 
+**Terminal install (advanced users).** Installs or updates to the latest release in one go. A download made
+with `curl` isn't marked as coming from the internet, so there's no Gatekeeper prompt. That also helps on
+company-managed Macs, where security software can stop a browser-downloaded copy from ever starting:
+
+```sh
+pkill -x MiniDeck; cd /tmp && rm -rf minideck && mkdir minideck && cd minideck \
+  && curl -fsSLO https://github.com/eftalor/MiniDeck/releases/latest/download/MiniDeck.zip \
+  && ditto -x -k MiniDeck.zip . && rm -rf /Applications/MiniDeck.app \
+  && ditto MiniDeck.app /Applications/MiniDeck.app && open /Applications/MiniDeck.app
+```
+
 ## Build & install
 
 ```sh
