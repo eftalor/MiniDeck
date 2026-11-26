@@ -179,13 +179,57 @@ final class MusicBridge {
         }
     }
 
-    /// Load a song paused at `position` (seconds): Music can't load without playing,
-    /// so mute, play, pause, seek, unmute. Optionally start playing at the end.
+    /// Helper for scripts that wait on Music: the current song's ID, or "" while loading.
+    private static let currentIDHandler = """
+    on mdCurrentID()
+        tell application "Music"
+            try
+                return persistent ID of current track
+            on error
+                return ""
+            end try
+        end tell
+    end mdCurrentID
+    """
+
+    /// Load a song at `position` (seconds), paused unless `thenPlay`, muted while loading.
+    ///
+    /// Music only queues the rest of a playlist when the whole playlist is started:
+    /// playing one song (even "inside" its playlist) gives a one-song queue, so next
+    /// does nothing and playback stops when the song ends. So start the playlist in
+    /// order and skip to the song, waiting for each skip to land (~0.35 s a song).
+    /// If that takes too long, fall back to the single song.
+    /// Result: "queue" (playlist queued), "single" (fallback) or "failed".
     func cue(trackID: String, playlistID: String, position: Double, thenPlay: Bool,
-             done: @escaping (Bool) -> Void) {
+             done: @escaping (String) -> Void) {
         let t = trackID.filter { $0.isHexDigit }, p = playlistID.filter { $0.isHexDigit }
         let pos = position.isFinite ? max(0, Int(position)) : 0
-        let startLine = p.isEmpty
+        let walk = p.isEmpty ? "" : """
+            try
+                set mdPl to (first playlist whose persistent ID is "\(p)")
+                set shuffle enabled to false
+                play mdPl
+                set mdStart to current date
+                set mdLast to ""
+                repeat
+                    set mdCur to my mdCurrentID()
+                    if mdCur is "\(t)" then
+                        set mdResult to "queue"
+                        exit repeat
+                    end if
+                    set mdElapsed to (current date) - mdStart
+                    if mdElapsed > 25 then exit repeat
+                    if mdCur is "" and mdElapsed > 6 then exit repeat
+                    if mdCur is "" or mdCur is mdLast then
+                        delay 0.05
+                    else
+                        set mdLast to mdCur
+                        next track
+                    end if
+                end repeat
+            end try
+            """
+        let single = p.isEmpty
             ? "play (first track of library playlist 1 whose persistent ID is \"\(t)\")"
             : """
               try
@@ -194,25 +238,35 @@ final class MusicBridge {
                   play (first track of library playlist 1 whose persistent ID is "\(t)")
               end try
               """
-        run("""
-        with timeout of 20 seconds
+        run(Self.currentIDHandler + """
+
+        with timeout of 90 seconds
         tell application "Music"
             set mdVol to sound volume
-            set mdOK to false
+            set mdShuffle to shuffle enabled
+            set mdResult to "failed"
             try
                 set sound volume to 0
-                \(startLine)
-                delay 0.6
+                \(walk)
+                if mdResult is not "queue" then
+                    \(single)
+                    delay 0.6
+                    set mdResult to "single"
+                end if
                 pause
                 set player position to \(pos)
-                set mdOK to true
+            on error
+                set mdResult to "failed"
+            end try
+            try
+                set shuffle enabled to mdShuffle
             end try
             set sound volume to mdVol
-            \(thenPlay ? "play" : "")
-            return mdOK
+            if mdResult is not "failed" and \(thenPlay) then play
+            return mdResult
         end tell
         end timeout
-        """) { d in done(d?.booleanValue ?? false) }
+        """) { d in done(d?.stringValue ?? "failed") }
     }
 
     // MARK: - Commands
@@ -270,11 +324,8 @@ final class MusicBridge {
         command("set player position to \(Int(seconds))")
     }
 
-    /// Play one song inside its playlist, so playback continues through that playlist.
-    func playTrack(_ trackID: String, inPlaylist playlistID: String) {
-        let t = trackID.filter { $0.isHexDigit }, p = playlistID.filter { $0.isHexDigit }
-        command("tell (first playlist whose persistent ID is \"\(p)\") to play (first track whose persistent ID is \"\(t)\")")
-    }
+    /// Start playing (after a play press that came in while loading).
+    func play() { command("play") }
 
     func play(_ p: Playlist) {
         // Persistent IDs are hex, so they are safe to embed.

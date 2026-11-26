@@ -9,7 +9,16 @@ final class PlayerModel: ObservableObject {
     @Published var errorText = ""
     @Published var hoverWindowButtons = false
     /// Non-nil while starting Music or restoring the last song; the view shows a spinner.
-    @Published var loadingText: String?
+    @Published var loadingText: String? {
+        didSet {
+            // Play was pressed while loading: play now that it's ready.
+            if loadingText == nil, oldValue != nil, playAfterLoading {
+                playAfterLoading = false
+                bridge.play()
+            }
+        }
+    }
+    private var playAfterLoading = false
 
     /// Song list below the player.
     @Published var showQueue = UserDefaults.standard.bool(forKey: "showQueue") {
@@ -150,8 +159,8 @@ final class PlayerModel: ObservableObject {
         loadingText = "Picking up where you left off…"
         Log.write("resuming \(r["name"] ?? "") at \(Int(r["position"] as? Double ?? 0)) s")
         bridge.cue(trackID: track, playlistID: r["playlist"] as? String ?? "",
-                   position: r["position"] as? Double ?? 0, thenPlay: thenPlay) { [weak self] ok in
-            Log.write(ok ? "resumed" : "couldn't resume the saved song")
+                   position: r["position"] as? Double ?? 0, thenPlay: thenPlay) { [weak self] result in
+            Log.write("resume: \(result)")
             self?.loadingText = nil
             self?.poll()
             completion?()
@@ -418,11 +427,19 @@ final class PlayerModel: ObservableObject {
         }
     }
 
+    /// Double-click in the song list: play that song with the rest of the playlist queued.
     func playTrack(_ t: QueueTrack) {
-        guard !tracksFor.isEmpty else { return }
+        guard !tracksFor.isEmpty, loadingText == nil else { return }
         resumePending = false
-        bridge.playTrack(t.trackID, inPlaylist: tracksFor)
-        pollSoon(in: 1.5)
+        playAfterLoading = false
+        info.name = t.name; info.artist = t.artist; info.trackID = t.trackID
+        info.position = 0; positionStamp = Date()
+        loadingText = "Loading song…"
+        bridge.cue(trackID: t.trackID, playlistID: tracksFor, position: 0, thenPlay: true) { [weak self] result in
+            Log.write("play from list: \(result)")
+            self?.loadingText = nil
+            self?.poll()
+        }
     }
 
     func isCurrent(_ p: Playlist) -> Bool {
@@ -434,6 +451,12 @@ final class PlayerModel: ObservableObject {
     }
 
     func playPause() {
+        if loadingText != nil {
+            // Loading (starting Music, resuming, or a song from the list): remember the press.
+            playAfterLoading.toggle()
+            info.state = playAfterLoading ? "playing" : "paused"
+            return
+        }
         info.position = livePosition(at: Date()); positionStamp = Date()
         info.state = info.isPlaying ? "paused" : "playing"   // instant feedback
         holdStateUntil = Date().addingTimeInterval(1.5)
