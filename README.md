@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" width="420" alt="MiniDeck playing Take Me Away by FM Attack, with the playlist picker open and a fuzzy search for 'ro' highlighting the matched letters">
+  <img src="docs/screenshot.png" width="420" alt="MiniDeck playing Take Me Away by FM Attack, with the playlist picker open and a fuzzy search for 'sw' highlighting the matched letters">
 </p>
 
 ---
