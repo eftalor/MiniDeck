@@ -450,6 +450,44 @@ final class PlayerModel: ObservableObject {
         bridge.playlists { [weak self] list in self?.playlists = list }
     }
 
+    // MARK: - Playlist picker (popover with fuzzy search)
+    @Published var showPlaylists = false {
+        didSet {
+            guard showPlaylists, !oldValue else { return }
+            playlistQuery = ""
+            playlistSelection = playlists.firstIndex(where: isCurrent) ?? 0
+            if playlists.isEmpty { refreshPlaylists() }
+        }
+    }
+    @Published var playlistQuery = "" {
+        didSet { if playlistQuery != oldValue { playlistSelection = 0 } }
+    }
+    @Published var playlistSelection = 0
+
+    /// Playlists matching the query, best first, with the matched letter positions.
+    var filteredPlaylists: [(playlist: Playlist, hits: [Int])] {
+        let q = playlistQuery.trimmingCharacters(in: .whitespaces)
+        if q.isEmpty { return playlists.map { ($0, []) } }
+        return playlists.enumerated()
+            .compactMap { i, p in Fuzzy.match(q, p.name).map { (i, p, $0.score, $0.hits) } }
+            .sorted { $0.2 != $1.2 ? $0.2 > $1.2 : $0.0 < $1.0 }
+            .map { ($0.1, $0.3) }
+    }
+
+    func movePlaylistSelection(_ d: Int) {
+        let n = filteredPlaylists.count
+        guard n > 0 else { return }
+        playlistSelection = max(0, min(n - 1, playlistSelection + d))
+    }
+
+    func choosePlaylist(_ p: Playlist? = nil) {
+        let list = filteredPlaylists
+        guard let pick = p ?? (list.indices.contains(playlistSelection) ? list[playlistSelection].playlist : nil)
+        else { return }
+        showPlaylists = false
+        if !isCurrent(pick) || info.state != "playing" { play(pick) }
+    }
+
     func playPause() {
         if loadingText != nil {
             // Loading (starting Music, resuming, or a song from the list): remember the press.
@@ -497,5 +535,55 @@ final class PlayerModel: ObservableObject {
         positionStamp = Date()
         bridge.seek(to: t)
         pollSoon(in: 1.5)
+    }
+}
+
+
+/// Small fuzzy matcher: the query's letters must appear in order; runs of letters and
+/// letters at the start of words score higher. Case and accents are ignored.
+enum Fuzzy {
+    static func match(_ query: String, _ text: String) -> (score: Int, hits: [Int])? {
+        let fold: (String) -> [Character] = {
+            Array($0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil))
+        }
+        let q = fold(query).filter { $0 != " " }
+        let t = fold(text)
+        guard !q.isEmpty, q.count <= t.count else { return q.isEmpty ? (0, []) : nil }
+        // Try every start position for the first letter, keep the best scoring walk.
+        var best: (Int, [Int])?
+        for start in t.indices where t[start] == q[0] {
+            var hits = [start], score = 0, ti = start + 1
+            for qc in q.dropFirst() {
+                // Prefer the next letter at a word start, else the nearest one.
+                var found = -1
+                var j = ti
+                while j < t.count {
+                    if t[j] == qc {
+                        if found < 0 { found = j }
+                        if j == ti || isWordStart(t, j) { found = j; break }
+                    }
+                    j += 1
+                }
+                if found < 0 { hits = []; break }
+                hits.append(found); ti = found + 1
+            }
+            if hits.isEmpty { continue }
+            for (k, h) in hits.enumerated() {
+                score += 1
+                if isWordStart(t, h) { score += 8 }
+                if k > 0, hits[k - 1] == h - 1 { score += 8 }
+                if k > 0 { score -= min(3, h - hits[k - 1] - 1) }
+            }
+            if hits[0] == 0 { score += 6 }
+            score -= t.count / 10   // a little bonus for shorter names
+            if best == nil || score > best!.0 { best = (score, hits) }
+        }
+        return best.map { (score: $0.0, hits: $0.1) }
+    }
+
+    private static func isWordStart(_ t: [Character], _ i: Int) -> Bool {
+        if i == 0 { return true }
+        let p = t[i - 1]
+        return !(p.isLetter || p.isNumber) || (t[i].isNumber && !p.isNumber)
     }
 }

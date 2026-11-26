@@ -38,7 +38,7 @@ Apple Music subscription, AirPlay, EQ and lossless settings all keep working exa
 - "Playing from" line showing the current playlist
 
 **Playlists**
-- Playlist picker menu with a checkmark on the one that's playing
+- Playlist picker with fuzzy search: type a few letters ("dmh" finds "Deep/Minimal House"), arrows to move, Return to play; a checkmark marks the one that's playing
 - Optional **song list** under the player that follows along and jumps to the current song; double-click to play any song
 
 **Window**
@@ -99,7 +99,7 @@ also publishes a release. To publish a new version (updates `VERSION`, tags, pus
 |---|---|
 | `MusicBridge.swift` | Talks to Music.app: compiled AppleScript on a serial queue for queries, raw Apple Events for the transport buttons so they never wait behind a slow query |
 | `PlayerModel.swift` | State, polling, Music's `playerInfo` notifications for instant track changes, resume, artwork fallback |
-| `PlayerView.swift` | The SwiftUI player, glass background, playlist menu |
+| `PlayerView.swift` | The SwiftUI player, glass background, playlist picker |
 | `TrackListView.swift` | The optional song list |
 | `main.swift` | The floating borderless panel and app lifecycle |
 | `icon/make-icon.swift` | Draws the app icon (`swift icon/make-icon.swift`) |

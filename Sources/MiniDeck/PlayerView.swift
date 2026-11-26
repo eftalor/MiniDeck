@@ -270,24 +270,102 @@ struct PlayerView: View {
     }
 
     private var playlistMenu: some View {
-        Menu {
-            if model.playlists.isEmpty {
-                Text(model.running ? "No playlists found" : "Start Music to load playlists")
+        Button(action: { model.showPlaylists.toggle() }) {
+            HStack(spacing: 2) {
+                Image(systemName: "music.note.list").font(.system(size: 13))
+                Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
             }
-            ForEach(model.playlists) { p in
-                // A toggle shows a checkmark next to the playlist that's playing now.
-                Toggle(p.name, isOn: Binding(get: { model.isCurrent(p) }, set: { _ in model.play(p) }))
-            }
-            Divider()
-            Button("Refresh list", action: model.refreshPlaylists)
-        } label: {
-            Image(systemName: "music.note.list")
-                .font(.system(size: 13))
+            .foregroundStyle(model.showPlaylists ? Color.accentColor : Color.primary)
+            .frame(height: 24)
+            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.visible)
-        .fixedSize()
+        .buttonStyle(.plain)
         .help("Choose a playlist to play")
+        .popover(isPresented: Binding(get: { model.showPlaylists }, set: { model.showPlaylists = $0 }),
+                 arrowEdge: .bottom) {
+            playlistPicker
+        }
+    }
+
+    private var playlistPicker: some View {
+        let list = model.filteredPlaylists
+        return VStack(spacing: 6) {
+            SearchField(text: Binding(get: { model.playlistQuery }, set: { model.playlistQuery = $0 }),
+                        placeholder: "Search \(model.playlists.count) playlists",
+                        onMove: model.movePlaylistSelection,
+                        onSubmit: { model.choosePlaylist() },
+                        onCancel: { model.showPlaylists = false })
+                .frame(width: 244, height: 22)
+            // Fixed height: resizing a popover while typing crashes AppKit.
+            ZStack {
+                if list.isEmpty {
+                    Text(model.playlists.isEmpty
+                         ? (model.running ? "No playlists found" : "Start Music to load playlists")
+                         : "No match")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(list.indices, id: \.self) { i in
+                                    let item = list[i]
+                                    playlistRow(item.playlist, hits: item.hits, selected: i == model.playlistSelection)
+                                        .onTapGesture { model.choosePlaylist(item.playlist) }
+                                        .onHover { if $0 { model.playlistSelection = i } }
+                                }
+                            }
+                        }
+                        .onAppear { proxy.scrollTo(model.playlistSelection, anchor: .center) }
+                        .onChange(of: model.playlistSelection) { _, i in proxy.scrollTo(i) }
+                    }
+                }
+            }
+            .frame(width: 244, height: 288, alignment: .top)
+            HStack {
+                Text(model.playlistQuery.isEmpty ? "↑↓ to pick, Return to play"
+                                                 : "\(list.count) of \(model.playlists.count)")
+                Spacer()
+                Button("Refresh", action: model.refreshPlaylists).buttonStyle(.link)
+            }
+            .font(.system(size: 10)).foregroundStyle(.secondary)
+            .frame(width: 244)
+        }
+        .padding(8)
+        .fixedSize()
+    }
+
+    private func playlistRow(_ p: Playlist, hits: [Int], selected: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 10, weight: .semibold))
+                .opacity(model.isCurrent(p) ? 1 : 0)
+            highlighted(p.name, hits)
+                .lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 12))
+        .foregroundStyle(selected ? Color.white : Color.primary)
+        .padding(.horizontal, 6)
+        .frame(height: 24)
+        .background(selected ? Color.accentColor : .clear, in: RoundedRectangle(cornerRadius: 5))
+        .contentShape(Rectangle())
+    }
+
+    /// The name with the letters the search matched in bold.
+    private func highlighted(_ name: String, _ hits: [Int]) -> Text {
+        let chars = Array(name)
+        guard !hits.isEmpty, hits.allSatisfy({ $0 < chars.count }) else { return Text(name) }
+        let set = Set(hits)
+        var out = Text("")
+        var run = "", runBold = false
+        for (i, c) in chars.enumerated() {
+            let b = set.contains(i)
+            if b != runBold, !run.isEmpty {
+                out = out + (runBold ? Text(run).bold() : Text(run)); run = ""
+            }
+            runBold = b; run.append(c)
+        }
+        return out + (runBold ? Text(run).bold() : Text(run))
     }
 
     /// Mac-style traffic light; the symbol shows while the pointer is over the pair.
@@ -341,4 +419,60 @@ struct ScrollCatcher: NSViewRepresentable {
 
     func makeNSView(context: Context) -> CatcherView { let v = CatcherView(); v.onScroll = onScroll; return v }
     func updateNSView(_ v: CatcherView, context: Context) { v.onScroll = onScroll }
+}
+
+
+/// A search field that keeps the keyboard: arrows move the selection, Return picks, Esc clears or closes.
+struct SearchField: NSViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    var onMove: (Int) -> Void
+    var onSubmit: () -> Void
+    var onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSSearchField {
+        let f = NSSearchField()
+        f.delegate = context.coordinator
+        f.placeholderString = placeholder
+        f.focusRingType = .none
+        f.sendsSearchStringImmediately = true
+        // The player is a non-activating panel, so make MiniDeck active to receive typing.
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            f.window?.makeKey()
+            f.window?.makeFirstResponder(f)
+        }
+        return f
+    }
+
+    func updateNSView(_ f: NSSearchField, context: Context) {
+        context.coordinator.parent = self
+        if f.stringValue != text { f.stringValue = text }
+        f.placeholderString = placeholder
+    }
+
+    final class Coordinator: NSObject, NSSearchFieldDelegate {
+        var parent: SearchField
+        init(_ p: SearchField) { parent = p }
+
+        func controlTextDidChange(_ n: Notification) {
+            if let f = n.object as? NSTextField { parent.text = f.stringValue }
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy sel: Selector) -> Bool {
+            switch sel {
+            case #selector(NSResponder.moveUp(_:)): parent.onMove(-1)
+            case #selector(NSResponder.moveDown(_:)): parent.onMove(1)
+            case #selector(NSResponder.pageUp(_:)), #selector(NSResponder.scrollPageUp(_:)): parent.onMove(-10)
+            case #selector(NSResponder.pageDown(_:)), #selector(NSResponder.scrollPageDown(_:)): parent.onMove(10)
+            case #selector(NSResponder.insertNewline(_:)): parent.onSubmit()
+            case #selector(NSResponder.cancelOperation(_:)):
+                if parent.text.isEmpty { parent.onCancel() } else { parent.text = "" }
+            default: return false
+            }
+            return true
+        }
+    }
 }
