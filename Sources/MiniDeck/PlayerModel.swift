@@ -261,7 +261,7 @@ final class PlayerModel: ObservableObject {
     func start() {
         if resumePending {
             showSavedSong()
-            loadingText = "Starting Music…"
+            loadingText = "Picking up where you left off…"
         }
         // Never leave the spinner up if Music doesn't respond.
         DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in
@@ -294,6 +294,13 @@ final class PlayerModel: ObservableObject {
     /// Music.app's own broadcast carries the track details, so the display
     /// updates even when AppleScript is slow or failing.
     private func apply(_ u: [AnyHashable: Any]) {
+        // While starting or resuming, Music announces in-between states (a "stopped" as it
+        // opens, then the muted play/pause of the resume). Keep the saved song on screen;
+        // the status check after the resume shows the real state.
+        if loadingText != nil {
+            Log.write("notification ignored while starting: \(u["Player State"] ?? "") \(u["Name"] ?? "")")
+            return
+        }
         var new = info
         if let st = u["Player State"] as? String { new.state = st.lowercased() }
         if new.state == "stopped" { new = TrackInfo(); new.shuffle = info.shuffle }
