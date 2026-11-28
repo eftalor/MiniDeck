@@ -50,8 +50,8 @@ Apple Music subscription, AirPlay, EQ and lossless settings all keep working exa
 **Lifecycle**
 - Starts Music **hidden in the background** — you never have to see the big window
 - Optionally quits Music when you quit MiniDeck
-- **Resumes where you left off**: the last song and position are restored, paused, until you press play
-- Loading indicator while Music wakes up instead of a confusing "Not playing"
+- **Resumes where you left off**: the last playlist, song and position are restored, paused, with the rest of the playlist still queued
+- Loading indicator while Music wakes up instead of a confusing "Not playing"; pressing play meanwhile plays as soon as it's ready
 - **About MiniDeck** (app menu or right-click) shows the version
 
 **Light on resources**: Music announces song changes itself, so MiniDeck only checks in every few seconds and stops redrawing when it is out of sight.
@@ -102,18 +102,23 @@ The version lives in `VERSION`. GitHub Actions builds every push on macOS 26 wit
 also publishes a release. To publish a new version (updates `VERSION`, tags, pushes, then follows the build):
 
 ```sh
-./release.sh 0.24 "What changed"
+./release.sh 0.30 "What changed"
 ```
+
+The tag message becomes the release notes. Each release gets `MiniDeck-x.y.zip` plus a plain `MiniDeck.zip`
+(used by the terminal install's "latest" link). A failed build is retried once automatically.
 
 ## How it works
 
 | Piece | What it does |
 |---|---|
 | `MusicBridge.swift` | Talks to Music.app: compiled AppleScript on a serial queue for queries, raw Apple Events for the transport buttons so they never wait behind a slow query |
-| `PlayerModel.swift` | State, polling, Music's `playerInfo` notifications for instant track changes, resume, artwork fallback |
+| `PlayerModel.swift` | State, polling, Music's `playerInfo` notifications for instant track changes, resume, volume, artwork fallback, the fuzzy playlist matcher |
 | `PlayerView.swift` | The SwiftUI player, glass background, playlist picker |
 | `TrackListView.swift` | The optional song list |
-| `main.swift` | The floating borderless panel and app lifecycle |
+| `main.swift` | The floating borderless panel, app menu and lifecycle |
+| `About.swift` | The About window |
+| `Log.swift` | The debug log |
 | `icon/make-icon.swift` | Draws the app icon (`swift icon/make-icon.swift`) |
 
 A debug log is written to `~/Library/Logs/MiniDeck.log`.
@@ -122,6 +127,8 @@ A debug log is written to `~/Library/Logs/MiniDeck.log`.
 
 - **AutoPlay and AutoMix** aren't exposed to scripting by Music, so MiniDeck can't show or toggle them.
 - Album-art fallback uses the public iTunes Search API (only the artist/album names are sent).
+- Starting in the middle of a playlist (resume, or double-clicking a song) takes a few seconds: Music's scripting
+  can only queue a playlist from its start, so MiniDeck starts it muted and skips ahead to the song.
 
 ## Roadmap
 
